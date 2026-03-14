@@ -295,7 +295,9 @@ const default_values = {
 	'last_login': 0,
 	'monitor_new_volume': true,
 	'monitor_new_issues': true,
-	'monitoring_scheme': "all"
+	'monitoring_scheme': "all",
+	'reader_fit': 'contain',
+	'reader_view': 'page'
 };
 
 function setupLocalStorage() {

@@ -44,7 +44,8 @@ from backend.implementations.naming import (generate_volume_folder_name,
                                             preview_mass_rename)
 from backend.implementations.remote_mapping import RemoteMappings
 from backend.implementations.root_folders import RootFolders
-from backend.implementations.volumes import Library, delete_issue_file
+from backend.implementations.volumes import (Library, delete_issue_file,
+                                              get_comic_page, get_comic_pages)
 from backend.internals.db_models import FilesDB
 from backend.internals.server import Server, StartTypeHandlers
 from backend.internals.settings import Settings, get_about_data
@@ -803,6 +804,30 @@ def api_get_publisher_volumes():
     )
 
     return return_api(library_volumes)
+
+
+# =====================
+# Comic Reader
+# =====================
+
+
+@api.route('/files/<int:file_id>/pages', methods=['GET'])
+@error_handler
+@auth
+def api_file_pages(file_id: int):
+    pages = get_comic_pages(file_id)
+    return return_api({
+        'page_count': len(pages),
+        'pages': pages
+    })
+
+
+@api.route('/files/<int:file_id>/pages/<int:page>', methods=['GET'])
+@error_handler
+@auth
+def api_file_page(file_id: int, page: int):
+    image_data, mimetype = get_comic_page(file_id, page)
+    return send_file(image_data, mimetype=mimetype), 200
 
 
 # =====================

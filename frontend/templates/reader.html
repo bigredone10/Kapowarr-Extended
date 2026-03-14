@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Reader{% endblock %}
+{% block css %}
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/reader.css') }}">
+{% endblock %}
+{% block js %}
+	<script src="{{ url_for('static', filename='js/reader.js') }}" defer></script>
+{% endblock %}
+
+{% block main %}
+<main class="reader-main">
+	<div id="reader-toolbar">
+		<div class="toolbar-left">
+			<button id="reader-back" title="Back to volume (Escape)">
+				<img src="{{url_base}}/static/img/cancel.svg" alt="Back">
+			</button>
+			<span id="reader-filename"></span>
+		</div>
+		<div class="toolbar-center">
+			<button id="page-prev" title="Previous page (Left arrow)">&lt;</button>
+			<span id="page-indicator">Page 1 / 1</span>
+			<button id="page-next" title="Next page (Right arrow)">&gt;</button>
+		</div>
+		<div class="toolbar-right">
+			<select id="fit-mode" title="Fit mode (F)">
+				<option value="contain" selected>Fit Page</option>
+				<option value="width">Fit Width</option>
+				<option value="none">Original</option>
+			</select>
+			<select id="view-mode" title="View mode">
+				<option value="page" selected>Page View</option>
+				<option value="scroll">Scroll View</option>
+			</select>
+		</div>
+	</div>
+
+	<div id="reader-loading" class="loading-screen">
+		<h2>Loading...</h2>
+	</div>
+
+	<div id="reader-error" class="loading-screen hidden">
+		<h2>Unable to read this file</h2>
+		<p>Only CBZ/ZIP and CBR/RAR formats are supported.</p>
+	</div>
+
+	<div id="page-view" class="hidden">
+		<div id="nav-prev" class="nav-zone" title="Previous page"></div>
+		<img id="page-image" src="" alt="Comic page">
+		<div id="nav-next" class="nav-zone" title="Next page"></div>
+	</div>
+
+	<div id="scroll-view" class="hidden"></div>
+</main>
+{% endblock main %}

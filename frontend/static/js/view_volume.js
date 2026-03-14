@@ -912,6 +912,15 @@ function showIssueInfo(issue_id, api_key) {
             entry.querySelector('.f-filepath').title = f.filepath;
             
             entry.querySelector('.f-size').innerText = convertSize(f.size);
+
+            const readLink = entry.querySelector('.f-read-link');
+            const ext = f.filepath.split('.').pop().toLowerCase();
+            if (['cbz', 'zip', 'cbr', 'rar'].includes(ext)) {
+                readLink.href = `${url_base}/reader/${f.id}`;
+            } else {
+                readLink.style.display = 'none';
+            }
+
             entry.querySelector('.f-delete button').onclick = e =>
                 sendAPI("DELETE", `/files/${f.id}`, api_key)
                 .then(response => entry.remove());

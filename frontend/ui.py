@@ -81,6 +81,11 @@ def ui_publishers():
     return render('publishers.html')
 
 
+@ui.route('/reader/<int:file_id>', methods=methods)
+def ui_reader(file_id):
+    return render('reader.html')
+
+
 @ui.route('/activity/queue', methods=methods)
 def ui_queue():
     return render('queue.html')

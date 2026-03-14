@@ -10,7 +10,9 @@ from asyncio import run
 from datetime import datetime, timedelta
 from functools import lru_cache
 from io import BytesIO
-from os.path import dirname, exists, isdir, relpath
+from os.path import dirname, exists, isdir, relpath, splitext
+from tempfile import TemporaryDirectory
+from zipfile import ZipFile
 from re import IGNORECASE, compile
 from time import time
 from typing import Any, Dict, List, Mapping, Set, Tuple, Union
@@ -22,8 +24,8 @@ from backend.base.custom_exceptions import (InvalidKeyValue, IssueNotFound,
                                             VolumeAlreadyAdded,
                                             VolumeDownloadedFor,
                                             VolumeNotFound)
-from backend.base.definitions import (BaseEnum, Constants, FileData,
-                                      GeneralFileData, IssueData,
+from backend.base.definitions import (BaseEnum, Constants, FileConstants,
+                                      FileData, GeneralFileData, IssueData,
                                       LibraryFilter, LibrarySorting,
                                       MonitorScheme, SpecialVersion,
                                       VolumeData)
@@ -33,7 +35,8 @@ from backend.base.files import (change_basefolder, create_folder,
                                 delete_file_folder, folder_is_inside_folder,
                                 rename_file)
 from backend.base.helpers import (PortablePool, extract_year_from_date,
-                                  first_of_subarrays, to_number_cv_id)
+                                  first_of_subarrays, run_rar,
+                                  to_number_cv_id)
 from backend.base.logging import LOGGER
 from backend.implementations.comicvine import ComicVine
 from backend.implementations.file_matching import scan_files
@@ -1748,3 +1751,111 @@ def delete_issue_file(file_id: int) -> None:
     FilesDB.delete_file(file_id)
 
     return
+
+
+# region Comic Reader
+def _is_image(filename: str) -> bool:
+    """Check if a filename has an image extension."""
+    return splitext(filename)[1].lower() in (
+        '.png', '.jpeg', '.jpg', '.webp', '.gif'
+    )
+
+
+def _detect_archive_type(filepath: str) -> str:
+    """Detect archive type from magic bytes or extension.
+
+    Returns:
+        str: 'zip' or 'rar'
+
+    Raises:
+        InvalidKeyValue: Unsupported file format.
+    """
+    with open(filepath, 'rb') as f:
+        header = f.read(8)
+
+    for magic, fmt in FileConstants.ARCHIVE_MAGIC_BYTES.items():
+        if header.startswith(magic):
+            return fmt
+
+    ext = splitext(filepath)[1].lower()
+    if ext in ('.cbz', '.zip'):
+        return 'zip'
+    elif ext in ('.cbr', '.rar'):
+        return 'rar'
+
+    raise InvalidKeyValue('file', filepath)
+
+
+def get_comic_pages(file_id: int) -> List[str]:
+    """Get sorted list of image filenames inside a comic archive.
+
+    Args:
+        file_id (int): The ID of the file in the database.
+
+    Returns:
+        List[str]: Sorted list of image filenames.
+    """
+    files = FilesDB.fetch(file_id=file_id)
+    filepath = files[0]['filepath']
+    archive_type = _detect_archive_type(filepath)
+
+    if archive_type == 'zip':
+        with ZipFile(filepath, 'r') as zf:
+            names = zf.namelist()
+    elif archive_type == 'rar':
+        result = run_rar(['lb', filepath])
+        names = result.stdout.split('\n')
+    else:
+        return []
+
+    pages = sorted(
+        n for n in names
+        if _is_image(n) and not n.startswith('__MACOSX')
+    )
+    return pages
+
+
+def get_comic_page(file_id: int, page: int) -> Tuple[BytesIO, str]:
+    """Extract a single page image from a comic archive.
+
+    Args:
+        file_id (int): The ID of the file in the database.
+        page (int): Zero-based page index.
+
+    Returns:
+        Tuple[BytesIO, str]: The image data and its mimetype.
+
+    Raises:
+        InvalidKeyValue: Page index out of range or unsupported format.
+    """
+    pages = get_comic_pages(file_id)
+    if page < 0 or page >= len(pages):
+        raise InvalidKeyValue('page', str(page))
+
+    page_name = pages[page]
+    files = FilesDB.fetch(file_id=file_id)
+    filepath = files[0]['filepath']
+    archive_type = _detect_archive_type(filepath)
+
+    ext = splitext(page_name)[1].lower()
+    mimetypes = {
+        '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+        '.png': 'image/png', '.webp': 'image/webp',
+        '.gif': 'image/gif'
+    }
+    mimetype = mimetypes.get(ext, 'image/jpeg')
+
+    if archive_type == 'zip':
+        with ZipFile(filepath, 'r') as zf:
+            data = zf.read(page_name)
+        return BytesIO(data), mimetype
+
+    elif archive_type == 'rar':
+        with TemporaryDirectory() as tmpdir:
+            run_rar(['x', '-o+', filepath, page_name, tmpdir + '/'])
+            extracted = tmpdir + '/' + page_name
+            with open(extracted, 'rb') as f:
+                data = f.read()
+        return BytesIO(data), mimetype
+
+    raise InvalidKeyValue('file', filepath)
