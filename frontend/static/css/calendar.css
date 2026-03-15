@@ -213,3 +213,104 @@
 		gap: 8px;
 	}
 }
+
+@media (max-width: 768px) {
+	.calendar-header {
+		flex-wrap: nowrap;
+		gap: 4px;
+		padding: 2px 6px;
+		align-items: center;
+		flex-shrink: 0;
+		min-height: 0;
+	}
+
+	.calendar-header h2 {
+		min-width: auto;
+		font-size: 0.75rem;
+		flex: 1;
+		text-align: center;
+		margin: 0;
+		line-height: 1;
+		padding: 0;
+	}
+
+	.calendar-header button {
+		font-size: 0.7rem;
+		padding: 3px 6px;
+		min-height: 24px;
+		line-height: 1;
+	}
+
+	#today-button {
+		padding: 3px 8px;
+	}
+
+	#calendar-grid {
+		grid-template-columns: 1fr;
+		min-height: auto;
+		gap: 0;
+	}
+
+	.calendar-day {
+		min-height: auto;
+	}
+
+	.calendar-day.empty-day {
+		display: none;
+	}
+
+	.calendar-day-header {
+		text-align: left;
+		display: flex;
+		gap: 8px;
+		align-items: baseline;
+		padding: 6px 10px;
+		background-color: var(--background-color);
+	}
+
+	.calendar-day-header .day-name {
+		font-size: 0.9rem;
+		font-weight: 600;
+	}
+
+	.calendar-day-header .day-date {
+		font-size: 0.8rem;
+	}
+
+	.day-issues {
+		padding: 6px 8px;
+		gap: 6px;
+	}
+
+	.day-issues:empty {
+		display: none;
+	}
+
+	.calendar-issue {
+		gap: 10px;
+		padding: 8px;
+	}
+
+	.calendar-issue-cover {
+		width: 40px;
+		height: 60px;
+	}
+
+	.calendar-issue-title {
+		font-size: 0.9rem;
+		white-space: normal;
+		-webkit-line-clamp: 2;
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+	}
+
+	.calendar-issue-number {
+		font-size: 0.8rem;
+		margin-top: 2px;
+	}
+
+	.calendar-empty-msg {
+		font-size: 0.9rem;
+		padding: 16px;
+	}
+}

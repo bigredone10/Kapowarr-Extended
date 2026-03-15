@@ -321,25 +321,109 @@ main.publishers-layout > * {
 	}
 
 	#publisher-panel {
-		width: 100%;
+		width: 100% !important;
 		min-width: auto;
-		max-height: 250px;
+		max-height: 200px;
 		border-right: none;
 		border-bottom: 1px solid var(--border-color);
+		resize: none;
+	}
+
+	.publisher-panel-header h2 {
+		font-size: 1.1rem;
+	}
+
+	#publisher-filter {
+		font-size: 1rem;
+		padding: 10px 12px;
+	}
+
+	#publisher-list li {
+		padding: 12px 14px;
+	}
+
+	.pub-name {
+		font-size: 1rem;
+	}
+
+	.pub-count {
+		font-size: 0.85rem;
+		padding: 3px 10px;
+	}
+
+	#custom-publisher-input {
+		font-size: 1rem;
+		padding: 10px 12px;
+	}
+
+	#custom-publisher-form button {
+		font-size: 1rem;
+		padding: 10px 14px;
+	}
+
+	#volumes-panel {
+		flex: none;
+		overflow: visible;
+	}
+
+	#volumes-content {
+		overflow: visible;
 	}
 
 	.volumes-header {
 		flex-direction: column;
 		align-items: stretch;
 		gap: 8px;
+		padding: 12px;
+	}
+
+	.volumes-header h2 {
+		font-size: 1.2rem;
 	}
 
 	.pub-search-bar {
 		max-width: none;
+		padding: 4px 8px;
+	}
+
+	.pub-search-bar input {
+		font-size: 1rem;
+		padding: 8px 6px;
 	}
 
 	#volumes-grid {
-		grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+		grid-template-columns: repeat(2, 1fr);
+		gap: 10px;
+		padding: 10px;
+		overflow-y: visible;
+	}
+
+	.pub-volume-info {
+		padding: 8px 10px;
+		gap: 4px;
+	}
+
+	.pub-volume-title {
+		font-size: 0.95rem;
+	}
+
+	.pub-volume-year {
+		font-size: 0.85rem;
+	}
+
+	.pub-volume-issues {
+		font-size: 0.8rem;
+	}
+
+	.pub-volume-badge {
+		font-size: 0.75rem;
+		padding: 3px 8px;
+	}
+}
+
+@media (max-width: 480px) {
+	#volumes-grid {
+		grid-template-columns: repeat(2, 1fr);
 		gap: 8px;
 		padding: 8px;
 	}

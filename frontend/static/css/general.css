@@ -491,8 +491,21 @@ main > *:not(.tool-bar-container) {
 		height: 4px;
 	}
 
+	:root {
+		--header-height: 40px;
+	}
+
+	header {
+		padding: 0 8px;
+	}
+
+	header .menu-title-container img {
+		height: 24px;
+	}
+
 	#toggle-nav {
 		display: inline-flex;
+		width: 1.5rem;
 	}
 	#nav-bar {
 		position: absolute;

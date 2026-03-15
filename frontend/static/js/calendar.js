@@ -281,6 +281,16 @@ function renderIssues(issues) {
 
 		dayEl.querySelector('.day-issues').appendChild(entry);
 	});
+
+	// Mark empty days for mobile hiding
+	calendarGrid.querySelectorAll('.calendar-day').forEach(dayEl => {
+		const issues = dayEl.querySelector('.day-issues');
+		if (!issues || issues.children.length === 0) {
+			dayEl.classList.add('empty-day');
+		} else {
+			dayEl.classList.remove('empty-day');
+		}
+	});
 };
 
 function loadWeek() {
