@@ -20,6 +20,14 @@ const customPublisherInput = document.querySelector('#custom-publisher-input');
 
 let selectedPublisher = null;
 
+// Pagination state
+let currentOffset = 0;
+let totalResults = 0;
+let pageLimit = 100;
+let isLoadingMore = false;
+let currentQuery = '';
+let loadRequestId = 0;
+
 // Add Volume modal elements
 const pubAddEls = {
 	cover: document.querySelector('#pub-add-cover'),
@@ -108,6 +116,7 @@ function selectPublisher(publisher) {
 	selectedPublisher = publisher;
 	publisherName.textContent = publisher;
 	searchInput.value = '';
+	currentQuery = '';
 
 	// Highlight active publisher
 	publisherList.querySelectorAll('li').forEach(li => {
@@ -119,35 +128,63 @@ function selectPublisher(publisher) {
 	});
 
 	hide([volumesPlaceholder], [volumesContent]);
-	loadVolumes(publisher, '');
+	loadVolumes(publisher, '', true);
 };
 
-function loadVolumes(publisher, query) {
-	hide([volumesGrid, emptyVolumes], [loadingVolumes]);
+function loadVolumes(publisher, query, reset) {
+	if (reset) {
+		currentOffset = 0;
+		totalResults = 0;
+		currentQuery = query;
+		volumesGrid.innerHTML = '';
+		hide([emptyVolumes], [loadingVolumes]);
+		loadRequestId++;
+	}
 
-	const params = { publisher: publisher };
+	isLoadingMore = true;
+	const thisRequest = loadRequestId;
+
+	const params = {
+		publisher: publisher,
+		offset: currentOffset,
+		limit: pageLimit
+	};
 	if (query) params.query = query;
 
 	usingApiKey()
 	.then(api_key => fetchAPI('/publishers/volumes', api_key, params))
 	.then(json => {
-		renderVolumes(json.result);
+		// Discard if a newer request has been made
+		if (thisRequest !== loadRequestId) return;
+
+		const data = json.result;
+		totalResults = data.total;
+		appendVolumes(data.volumes);
+		currentOffset += pageLimit;
+
+		if (data.volumes.length === 0 && currentOffset <= pageLimit) {
+			hide([loadingVolumes], [emptyVolumes]);
+		} else {
+			hide([loadingVolumes, emptyVolumes], [volumesGrid]);
+		}
 	})
 	.catch(e => {
+		if (thisRequest !== loadRequestId) return;
 		console.error('Failed to load volumes:', e);
-		hide([loadingVolumes], [emptyVolumes]);
+		if (currentOffset === 0) {
+			hide([loadingVolumes], [emptyVolumes]);
+		}
+	})
+	.finally(() => {
+		if (thisRequest === loadRequestId) {
+			isLoadingMore = false;
+		}
 	});
 };
 
-function renderVolumes(volumes) {
-	volumesGrid.innerHTML = '';
-
-	if (volumes.length === 0) {
-		hide([loadingVolumes], [emptyVolumes]);
-		return;
-	}
-
-	hide([loadingVolumes, emptyVolumes], [volumesGrid]);
+function appendVolumes(volumes) {
+	// Remove existing spacers
+	volumesGrid.querySelectorAll('.pub-grid-spacer').forEach(s => s.remove());
 
 	const api_key = getLocalStorage('api_key').api_key;
 
@@ -201,20 +238,45 @@ function renderVolumes(volumes) {
 
 		volumesGrid.appendChild(card);
 	});
+
+	// Add spacers to prevent last row from stretching
+	for (let i = 0; i < 20; i++) {
+		const spacer = document.createElement('div');
+		spacer.className = 'pub-grid-spacer';
+		volumesGrid.appendChild(spacer);
+	}
+
+	// Update status
+	const cardCount = volumesGrid.querySelectorAll('.pub-volume-card').length;
+	if (totalResults > 0) {
+		publisherName.textContent =
+			`${selectedPublisher} (${cardCount} of ${totalResults})`;
+	}
 };
+
+// Infinite scroll - load more when near bottom
+volumesGrid.addEventListener('scroll', () => {
+	if (isLoadingMore || !selectedPublisher) return;
+	if (currentOffset >= totalResults) return;
+
+	const scrollBottom = volumesGrid.scrollHeight - volumesGrid.scrollTop - volumesGrid.clientHeight;
+	if (scrollBottom < 300) {
+		loadVolumes(selectedPublisher, currentQuery, false);
+	}
+});
 
 // Search within publisher
 searchForm.onsubmit = e => {
 	e.preventDefault();
 	if (selectedPublisher) {
-		loadVolumes(selectedPublisher, searchInput.value);
+		loadVolumes(selectedPublisher, searchInput.value, true);
 	}
 };
 
 searchClear.onclick = () => {
 	searchInput.value = '';
 	if (selectedPublisher) {
-		loadVolumes(selectedPublisher, '');
+		loadVolumes(selectedPublisher, '', true);
 	}
 };
 
@@ -307,7 +369,7 @@ function addVolumeFromPublisher() {
 		// Refresh both panels
 		loadPublishers();
 		if (selectedPublisher) {
-			loadVolumes(selectedPublisher, searchInput.value);
+			loadVolumes(selectedPublisher, searchInput.value, true);
 		}
 	})
 	.catch(e => {

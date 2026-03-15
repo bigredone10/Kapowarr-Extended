@@ -217,83 +217,96 @@ main.publishers-layout > #publisher-panel {
 	outline: none;
 }
 
-/* Volume Grid */
+/* Volume Grid - matches Volumes page layout */
 #volumes-grid {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-	gap: 12px;
-	padding: 12px;
+	--entry-width: clamp(7rem, 11%, 9rem);
+	display: flex;
+	align-items: flex-start;
+	flex-wrap: wrap;
+	gap: 1rem;
+	padding: 1.5rem;
 	overflow-y: auto;
 	flex: 1;
 }
 
 .pub-volume-card {
+	flex-grow: 1;
+	width: var(--entry-width);
 	display: flex;
 	flex-direction: column;
-	border: 1px solid var(--border-color);
-	border-radius: 6px;
-	overflow: hidden;
-	background-color: var(--foreground-color);
+	justify-content: center;
 	text-decoration: none;
-	color: var(--text-color);
-	transition: transform 0.15s, box-shadow 0.15s;
+	color: var(--dimmed-text-color);
+	background-color: var(--foreground-color);
+	border-radius: 1px;
 	position: relative;
+	transition: box-shadow 200ms ease-in;
 }
 
 .pub-volume-card:hover {
-	transform: translateY(-2px);
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	box-shadow: 0 0 12px #000;
+	text-decoration: none;
 }
 
 .pub-volume-card.in-library {
-	border-color: var(--success-color);
+	border-left: 3px solid var(--success-color);
 }
 
 .pub-volume-card.not-in-library {
-	border-color: var(--border-color);
+	border-left: none;
 }
 
 .pub-volume-cover {
-	width: 100%;
 	aspect-ratio: 2/3;
+	width: 100%;
 	object-fit: cover;
 	background-color: var(--background-color);
 }
 
+.pub-volume-info > :where(p, span) {
+	padding: .1rem .2rem;
+	text-align: center;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	overflow-x: hidden;
+	font-size: clamp(.65rem, .8vw, .75rem);
+	font-weight: 400;
+}
+
 .pub-volume-info {
-	padding: 6px 8px;
+	padding: 0;
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
 }
 
 .pub-volume-title {
-	font-size: 0.8rem;
 	font-weight: 500;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
 }
 
 .pub-volume-year {
-	font-size: 0.75rem;
 	color: var(--dimmed-text-color);
 }
 
 .pub-volume-issues {
-	font-size: 0.7rem;
 	color: var(--dimmed-text-color);
 }
 
 .pub-volume-badge {
 	position: absolute;
-	top: 6px;
-	right: 6px;
-	padding: 2px 6px;
-	border-radius: 3px;
-	font-size: 0.65rem;
+	top: 4px;
+	right: 4px;
+	padding: 1px 4px;
+	border-radius: 2px;
+	font-size: clamp(.5rem, .7vw, .6rem);
 	font-weight: 600;
 	text-transform: uppercase;
+}
+
+.pub-grid-spacer {
+	height: 1rem;
+	max-width: 100%;
+	width: var(--entry-width);
+	flex-grow: 127;
 }
 
 .badge-library {

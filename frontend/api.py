@@ -780,6 +780,13 @@ def api_get_publishers():
 def api_get_publisher_volumes():
     publisher = extract_key(request, 'publisher')
     query = extract_key(request, 'query', check_existence=False) or ''
+    offset = int(
+        extract_key(request, 'offset', check_existence=False) or 0
+    )
+    limit = int(
+        extract_key(request, 'limit', check_existence=False) or 50
+    )
+    limit = min(limit, 100)
 
     # Get library volumes for this publisher
     library_volumes = Library.get_publisher_volumes(publisher, query)
@@ -787,14 +794,17 @@ def api_get_publisher_volumes():
     for vol in library_volumes:
         vol['in_library'] = True
 
-    # Always search ComicVine for this publisher
-    cv_volumes = []
+    # Search ComicVine with pagination
+    cv_result = {'volumes': [], 'total': 0, 'offset': offset, 'limit': limit}
     try:
         cv = ComicVine()
-        cv_volumes = cv.search_volumes_by_publisher(publisher, query)
+        cv_result = cv.search_volumes_by_publisher(
+            publisher, query, offset, limit
+        )
     except (InvalidComicVineApiKey, KapowarrException):
         pass
 
+    cv_volumes = cv_result.get('volumes', [])
     for vol in cv_volumes:
         if vol['comicvine_id'] not in library_cv_ids:
             del vol['cover']  # type: ignore
@@ -807,7 +817,12 @@ def api_get_publisher_volumes():
         key=lambda v: (v.get('title') or '', v.get('year') or 0)
     )
 
-    return return_api(library_volumes)
+    return return_api({
+        'volumes': library_volumes,
+        'total': cv_result.get('total', 0),
+        'offset': offset,
+        'limit': limit
+    })
 
 
 # =====================

@@ -783,77 +783,123 @@ class ComicVine:
     def search_volumes_by_publisher(
         self,
         publisher: str,
-        query: str = ''
-    ) -> List[VolumeMetadata]:
+        query: str = '',
+        offset: int = 0,
+        limit: int = 50
+    ) -> Dict[str, Any]:
         """Search ComicVine for volumes filtered by publisher.
 
-        When a query is provided, searches for that query and filters
-        results by publisher. When no query is given, performs multiple
-        searches to gather a broad set of volumes from the publisher.
+        Fetches volume IDs from the /publisher endpoint, then
+        retrieves full metadata in batches from /volumes.
 
         Args:
             publisher (str): The publisher name to filter by.
             query (str): Optional search query within the publisher.
+            offset (int): Offset for pagination.
+            limit (int): Number of results per page.
 
         Returns:
-            List[VolumeMetadata]: Volumes matching the publisher.
+            Dict with 'volumes' (List[VolumeMetadata]),
+            'total' (int), 'offset' (int), 'limit' (int).
         """
+        empty = {'volumes': [], 'total': 0, 'offset': offset, 'limit': limit}
+
         async def _search():
-            seen_ids: set = set()
-            results: List[VolumeMetadata] = []
-
             async with AsyncSession() as session:
+                # Look up publisher ID via /publishers endpoint
+                try:
+                    pub_response = await self.__call_api(
+                        session,
+                        '/publishers',
+                        {
+                            'filter': f'name:{publisher}',
+                            'limit': 10,
+                            'field_list': 'id,name'
+                        },
+                        {'results': []}
+                    )
+                except CVRateLimitReached:
+                    return empty
+
+                pub_id = None
+                for pub in pub_response.get('results', []):
+                    if pub.get('name', '').lower() == publisher.lower():
+                        pub_id = pub['id']
+                        break
+
+                if not pub_id:
+                    return empty
+
+                await sleep(Constants.CV_BRAKE_TIME)
+
+                # Get all volume IDs from the publisher
+                try:
+                    pub_detail = await self.__call_api(
+                        session,
+                        f'/publisher/4010-{pub_id}',
+                        {'field_list': 'volumes'}
+                    )
+                except CVRateLimitReached:
+                    return empty
+
+                all_volumes = pub_detail.get('results', {}).get(
+                    'volumes', []
+                )
+
+                # Filter by query if provided
                 if query:
-                    # Search with the query, filter by publisher
-                    search_terms = [query]
-                else:
-                    # Search with the publisher name itself to get
-                    # a broad set of their volumes
-                    search_terms = [publisher]
+                    q_lower = query.lower()
+                    all_volumes = [
+                        v for v in all_volumes
+                        if q_lower in v.get('name', '').lower()
+                    ]
 
-                for term in search_terms:
-                    # Use /search endpoint with pagination
-                    for offset in (0, 50):
-                        try:
-                            response = await self.__call_api(
-                                session,
-                                '/search',
-                                {
-                                    'query': term,
-                                    'resources': 'volume',
-                                    'limit': 50,
-                                    'offset': offset,
-                                    'field_list': self.search_field_list
-                                },
-                                {'results': []}
-                            )
-                        except CVRateLimitReached:
-                            return results
+                total = len(all_volumes)
 
-                        raw_results = response.get('results', [])
-                        if not raw_results:
-                            break
+                # Sort by name and apply pagination
+                all_volumes.sort(key=lambda v: v.get('name', '').lower())
+                page = all_volumes[offset:offset + limit]
 
-                        formatted = self.__format_search_output(
-                            raw_results
-                        )
-                        for r in formatted:
-                            if (
-                                r.get('publisher') == publisher
-                                and r['comicvine_id'] not in seen_ids
-                            ):
-                                seen_ids.add(r['comicvine_id'])
-                                results.append(r)
+                if not page:
+                    return {
+                        'volumes': [], 'total': total,
+                        'offset': offset, 'limit': limit
+                    }
 
-                        total = response.get(
-                            'number_of_total_results', 0
-                        )
-                        if offset + 50 >= total:
-                            break
+                await sleep(Constants.CV_BRAKE_TIME)
 
-                        await sleep(Constants.CV_BRAKE_TIME)
+                # Fetch full metadata for this page of volume IDs
+                vol_ids = '|'.join(str(v['id']) for v in page)
+                try:
+                    response = await self.__call_api(
+                        session,
+                        '/volumes',
+                        {
+                            'filter': f'id:{vol_ids}',
+                            'limit': limit,
+                            'field_list': self.search_field_list
+                        },
+                        {'results': []}
+                    )
+                except CVRateLimitReached:
+                    return empty
 
-            return results
+                raw_results = response.get('results', [])
+                formatted = self.__format_search_output(
+                    raw_results
+                ) if raw_results else []
+
+                # Re-sort since /volumes may return in different order
+                formatted.sort(
+                    key=lambda v: v.get('title', '').lower()
+                )
+
+                return {
+                    'volumes': formatted,
+                    'total': total,
+                    'offset': offset,
+                    'limit': limit
+                }
 
         return run(_search())
 
