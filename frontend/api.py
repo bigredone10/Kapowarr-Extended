@@ -747,8 +747,16 @@ def api_get_calendar():
         pass
 
     # Add CV issues that aren't already in the library
+    # Deduplicate by issue comicvine_id
+    seen_issue_ids = {
+        i.get('issue_comicvine_id') or i.get('comicvine_id')
+        for i in library_issues
+    }
     for issue in cv_issues:
-        if issue['volume_comicvine_id'] not in library_cv_ids:
+        issue_cv_id = issue.get('comicvine_id')
+        if (issue['volume_comicvine_id'] not in library_cv_ids
+                and issue_cv_id not in seen_issue_ids):
+            seen_issue_ids.add(issue_cv_id)
             issue['in_library'] = False
             issue['volume_id'] = None
             issue['id'] = None

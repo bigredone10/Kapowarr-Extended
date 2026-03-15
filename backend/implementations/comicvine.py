@@ -645,6 +645,7 @@ class ComicVine:
         """
         async def _fetch():
             results = []
+            seen_ids: set = set()
             async with AsyncSession() as session:
                 date_filter = f'{self.date_type}:{start_date}|{end_date}'
                 offset = 0
@@ -674,8 +675,12 @@ class ComicVine:
                         break
 
                     for issue in batch:
+                        issue_id = int(issue['id'])
+                        if issue_id in seen_ids:
+                            continue
+                        seen_ids.add(issue_id)
                         results.append({
-                            'comicvine_id': int(issue['id']),
+                            'comicvine_id': issue_id,
                             'issue_number': (
                                 issue.get('issue_number') or '1'
                             ).replace('/', '-').strip(),
